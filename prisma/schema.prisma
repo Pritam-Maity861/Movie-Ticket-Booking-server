@@ -1,0 +1,279 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+//////////////////////////////////////////////////
+// ENUMS
+//////////////////////////////////////////////////
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum PaymentProvider {
+  STRIPE
+  RAZORPAY
+  PAYPAL
+}
+
+//////////////////////////////////////////////////
+// USER
+//////////////////////////////////////////////////
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  password     String
+  profilePicUrl String?
+
+  role         UserRole @default(USER)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  bookings     Booking[]
+  payments     Payment[]
+
+  refreshTokens RefreshToken[]
+
+  @@index([email])
+}
+
+model RefreshToken {
+  id           String   @id @default(uuid())
+
+  userId       String
+  tokenHash    String
+
+  device       String?
+  ipAddress    String?
+  userAgent   String?
+
+  expiresAt    DateTime
+  revoked      Boolean  @default(false)
+
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+//////////////////////////////////////////////////
+// MOVIE
+//////////////////////////////////////////////////
+
+model Movie {
+  id            String   @id @default(uuid())
+  title         String
+  description   String?
+  duration      Int      // minutes
+  languageId    String
+  genreId       String
+  language      Language @relation(fields: [languageId], references: [id])
+  genre         Genre   @relation(fields: [genreId], references: [id])
+  trailerUrl    String
+  releaseDate   DateTime
+  posterUrl     String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  showtimes     Showtime[]
+
+  @@index([title])
+}
+
+model Genre {
+  id      String  @id @default(uuid())
+  name    String  @unique
+  movies  Movie[]
+}
+model Language {
+  id      String  @id @default(uuid())
+  name    String  @unique
+  movies  Movie[]
+}
+
+//////////////////////////////////////////////////
+// THEATER
+//////////////////////////////////////////////////
+
+model Theater {
+  id          String   @id @default(uuid())
+  name        String
+  city        String
+  address     String
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  screens     Screen[]
+}
+
+//////////////////////////////////////////////////
+// SCREEN
+//////////////////////////////////////////////////
+
+model Screen {
+  id          String   @id @default(uuid())
+  name        String
+  theaterId   String
+  totalSeats  Int
+
+  createdAt   DateTime @default(now())
+
+  theater     Theater  @relation(fields: [theaterId], references: [id], onDelete: Cascade)
+
+  seats       Seat[]
+  showtimes   Showtime[]
+
+  @@index([theaterId])
+}
+
+//////////////////////////////////////////////////
+// SEAT
+//////////////////////////////////////////////////
+
+model Seat {
+  id         String  @id @default(uuid())
+  screenId   String
+  row        String
+  number     Int
+  type       String  // REGULAR / PREMIUM / VIP
+
+  screen     Screen  @relation(fields: [screenId], references: [id], onDelete: Cascade)
+
+  bookingSeats BookingSeat[]
+
+  @@unique([screenId, row, number])
+  @@index([screenId])
+}
+
+//////////////////////////////////////////////////
+// SHOWTIME
+//////////////////////////////////////////////////
+
+model Showtime {
+  id          String   @id @default(uuid())
+
+  movieId     String
+  screenId    String
+
+  startTime   DateTime
+  endTime     DateTime
+
+  price       Float
+
+  createdAt   DateTime @default(now())
+
+  movie       Movie    @relation(fields: [movieId], references: [id])
+  screen      Screen   @relation(fields: [screenId], references: [id])
+
+  bookings    Booking[]
+    bookingSeats BookingSeat[] 
+
+  @@index([movieId])
+  @@index([screenId])
+  @@index([startTime])
+}
+
+//////////////////////////////////////////////////
+// BOOKING
+//////////////////////////////////////////////////
+
+model Booking {
+  id           String        @id @default(uuid())
+
+  userId       String
+  showtimeId   String
+
+  totalAmount  Float
+  status       BookingStatus @default(PENDING)
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id])
+  showtime     Showtime      @relation(fields: [showtimeId], references: [id])
+
+  seats        BookingSeat[]
+  payment      Payment?
+
+  @@index([userId])
+  @@index([showtimeId])
+}
+
+//////////////////////////////////////////////////
+// BOOKING SEATS (JOIN TABLE)
+//////////////////////////////////////////////////
+
+model BookingSeat {
+  id          String   @id @default(uuid())
+
+  bookingId   String
+  seatId      String
+  showtimeId  String
+
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  seat        Seat     @relation(fields: [seatId], references: [id])
+  showtime    Showtime @relation(fields: [showtimeId], references: [id])
+
+  createdAt   DateTime @default(now())
+
+  @@unique([seatId, showtimeId])
+  @@index([bookingId])
+}
+//////////////////////////////////////////////////
+// PAYMENT
+//////////////////////////////////////////////////
+
+model Payment {
+  id              String          @id @default(uuid())
+
+  bookingId       String          @unique
+  userId          String
+
+  amount          Float
+  provider        PaymentProvider
+  status          PaymentStatus   @default(PENDING)
+
+  providerRef     String?         // payment gateway transaction id
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  booking         Booking         @relation(fields: [bookingId], references: [id])
+  user            User            @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
