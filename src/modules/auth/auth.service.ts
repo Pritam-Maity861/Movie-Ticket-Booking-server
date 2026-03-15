@@ -18,10 +18,33 @@ export class AuthService {
       regUser.name,
     );
 
+    const accessToken=generateAccessToken(user.id,user.role,user.email);
+    const refreshToken=generateRefreshToken(user.id);
+
+    //hash the refresh token before storing it in the database for security
+    const hashedRefreshToken = crypto
+      .createHash("sha256")
+      .update(refreshToken)
+      .digest("hex");
+    await AuthRepository.updateUserRefreshToken(
+      user.id,
+      hashedRefreshToken,
+      regUser.ipaddress,
+      regUser.userAgent,
+      regUser.device,
+    );
+
+
     return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        profilePic: user.profilePicUrl,
+      },
     };
   }
 
@@ -115,6 +138,15 @@ export class AuthService {
     };
   }
 
+  static async logOut(refreshToken:string) {
+    const validToken=await AuthRepository.findValidRefreshToken(refreshToken);
+    if(!validToken){
+      throw new Error("Invalid refresh token");
+    }
+    await AuthRepository.revokeRefreshToken(validToken.id);
+
+  }
+
   static async getCurrentUser(userId: string) {
     const user = await AuthRepository.findUserById(userId);
     if (!user) {
@@ -127,5 +159,9 @@ export class AuthService {
       role: user.role,
       profilePic: user.profilePicUrl,
     };
+  }
+
+  static async logOutAllDevices(userId: string) {
+    await AuthRepository.revokeAllRefreshTokensForUser(userId);
   }
 }

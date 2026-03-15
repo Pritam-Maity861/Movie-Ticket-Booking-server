@@ -1,5 +1,6 @@
 import { prisma } from "../../config/prisma";
 import crypto from "crypto";
+import cron from "node-cron";
 
 export class AuthRepository {
   static findUserByEmail(email: string) {
@@ -86,6 +87,43 @@ export class AuthRepository {
         name: true,
         role: true,
         profilePicUrl: true,
+      },
+    });
+  }
+
+  /**
+   * @description This method is scheduled to run every day at 3 AM and it will delete all the refresh tokens that are revoked and expired for more than 7 days to keep the database clean and avoid storing unnecessary data.
+   */
+  static cleanUpRefreshTokens() {
+    cron.schedule("0 3 * * *", async () => {  // Schedule to run every day at 3 AM
+      await prisma.refreshToken.deleteMany({
+        where: {
+          OR: [
+            {
+              revoked: true,
+              createdAt: {
+                lt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),   // Only delete revoked tokens that are older than 7 days to avoid deleting recently revoked tokens that might still be needed for security audits or investigations.
+              },
+            },
+            {
+              expiresAt: {
+                lt: new Date(),    // Delete all expired tokens 
+              },
+            },
+          ],
+        },
+      })
+    });
+  }
+
+  static revokeAllRefreshTokensForUser(userId: string) {
+    return prisma.refreshToken.updateMany({
+      where: {
+        userId,
+        revoked: false,
+      },
+      data: {
+        revoked: true,
       },
     });
   }

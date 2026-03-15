@@ -16,15 +16,27 @@ export const signUp = asyncHandler(async (req: Request, res: Response) => {
   if (!parsedData.success) {
     throw new ApiError(400, "Validation failed", parsedData.error.issues);
   }
+  const device = req.headers["user-agent"] || "Unknown";
   const result = await AuthService.registerUser({
     email: parsedData.data.email,
     password: parsedData.data.password,
     name: parsedData.data.name,
+    device,
+    ipaddress: req.ip,
+    userAgent: device
+  });
+
+  //set httponly cookie for refresh token
+  res.cookie("refreshToken", result.refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production", // Set secure flag in production
+    sameSite: "strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 
   res
     .status(200)
-    .json(new ApiResponse(200, result, "User registered successfully"));
+    .json(new ApiResponse(200, { user: result.user, accessToken: result.accessToken }, "User registered successfully"));
 });
 
 /**
@@ -50,7 +62,7 @@ export const signIn = asyncHandler(async (req: Request, res: Response) => {
   res.cookie("refreshToken", result.refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production", // Set secure flag in production
-    sameSite: "lax",
+    sameSite: "strict",
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 
@@ -85,7 +97,7 @@ export const refreshToken = asyncHandler(
     res.cookie("refreshToken", result.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -100,6 +112,49 @@ export const refreshToken = asyncHandler(
       );
   },
 );
+
+
+/**
+ * @description Logout user by invalidating refresh token
+ */
+export const logOut= asyncHandler(async (req: AuthRequest, res: Response) => {
+  const refreshToken=req.cookies.refreshToken;
+  if(!refreshToken){
+    throw new ApiError(400,"Refresh token not found");
+  }
+  await AuthService.logOut(refreshToken);
+  //clear refresh token cookie
+  // res.cookie("refreshToken","",{
+  //   httpOnly:true,
+  //   secure:process.env.NODE_ENV==="production",
+  //   sameSite:"strict",
+  //   expires:new Date(0), // Set the cookie to expire immediately
+  // })
+
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  })
+
+  res.status(200).json(new ApiResponse(200,null,"User logged out successfully"));
+});
+
+/**
+ * @description logOut from all devices..
+ */
+export const logOutAllDevices=asyncHandler(async (req: AuthRequest, res: Response)=>{
+  if(!req.user?.userId){
+    throw new ApiError(401,"Unauthorized");
+  }
+  await AuthService.logOutAllDevices(req.user.userId);
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  })
+  res.status(200).json(new ApiResponse(200,null,"User logged out from all devices successfully"));
+});
 
 /**
  * @description get me endpoint to get current logged in user details

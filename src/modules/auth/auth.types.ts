@@ -5,6 +5,9 @@ export interface registerUser {
     email: string;
     password: string;
     name: string;
+    ipaddress?: string;
+    device?: string;
+    userAgent?: string;
 }
 
 export interface loginUser {
