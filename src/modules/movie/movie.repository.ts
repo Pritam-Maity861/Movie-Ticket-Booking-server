@@ -63,40 +63,73 @@ export class MovieRepository{
         })
     }
 
-    static createMovie(data: {
-        title: string;
-        description?: string;
-        releaseDate: Date;
-        rating?: number;
-        genreId: string;
-        languageId: string;
-        posterUrl?: string;
-        trailerUrl: string;
-        duration: number;
-      }) {
-        return prisma.movie.create({
-          data: {
-            title: data.title,
-            description: data.description,
-            releaseDate: data.releaseDate,
-            rating: data.rating,
-            genreId: data.genreId,
-            languageId: data.languageId,
-            duration: data.duration,
-            trailerUrl: data.trailerUrl,
-            posterUrl: data.posterUrl,
-          },
-        });
-      }
+    // static createMovie(data: {
+    //     title: string;
+    //     description?: string;
+    //     releaseDate: Date;
+    //     rating?: number;
+    //     genreId: string;
+    //     languageId: string;
+    //     posterUrl?: string;
+    //     trailerUrl: string;
+    //     duration: number;
+    //   }) {
+    //     return prisma.movie.create({
+    //       data: {
+    //         title: data.title,
+    //         description: data.description,
+    //         releaseDate: data.releaseDate,
+    //         rating: data.rating,
+    //         genreId: data.genreId,
+    //         languageId: data.languageId,
+    //         duration: data.duration,
+    //         trailerUrl: data.trailerUrl,
+    //         posterUrl: data.posterUrl,
+    //       },
+    //     });
+    //   }
 
-      static getAllMovies(){
-        return prisma.movie.findMany();
+      static async getAllMovies({page,limit}: {page: number, limit: number}){
+        const skip=(page-1)*limit; //calculate the number of records to skip
+        const movies=await prisma.movie.findMany({
+            skip,
+            take:limit,
+            orderBy:{
+                createdAt:'desc'
+            },
+            include:{
+                languages:true,
+                genres:true,
+                credits:{
+                    include:{
+                        person:true
+                    }
+                }
+            }
+        });
+        //total count
+        const total=await prisma.movie.count();
+        return {
+            movies,
+            currentPage:page,
+            totalPages:Math.ceil(total/limit),
+            hasMore:skip+movies.length<total,
+        }
       }
 
       static getMovieById(id:string){
         return prisma.movie.findUnique({
             where:{
                 id
+            },
+            include:{
+                languages:true,
+                genres:true,
+                credits:{
+                    include:{
+                        person:true
+                    }
+                }
             }
         })
       }

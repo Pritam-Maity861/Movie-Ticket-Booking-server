@@ -102,7 +102,15 @@ export const DeleteLanguage=asyncHandler(async(req,res)=>{
  */
 
 export const createMovie = asyncHandler(async (req, res) => {
-  const parsedData = createMovieSchema.safeParse(req.body);
+  const parsedBody = {
+    ...req.body,
+    genreIds: JSON.parse(req.body.genreIds),
+    languageIds: JSON.parse(req.body.languageIds),
+    credits: JSON.parse(req.body.credits),
+    duration: Number(req.body.duration),
+    rating: req.body.rating ? Number(req.body.rating) : undefined,
+  };
+  const parsedData = createMovieSchema.safeParse(parsedBody);
 
   if (!parsedData.success) {
     throw new ApiError(400, "Validation failed", parsedData.error.issues);
@@ -147,7 +155,9 @@ export const createMovie = asyncHandler(async (req, res) => {
 
 
 export const getAllmovies=asyncHandler(async(req,res)=>{
-  const result=await MovieService.getAllMovies();
+  let page=parseInt(req.query.page as string) || 1;
+  let limit=parseInt(req.query.limit as string) || 10;
+  const result=await MovieService.getAllMovies({page,limit});
   res.status(200).json(new ApiResponse(200,result,"Movies fetched successfully"));
 });
 
