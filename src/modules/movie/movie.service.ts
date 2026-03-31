@@ -1,12 +1,12 @@
-import { time } from "node:console";
 import { prisma } from "../../config/prisma";
+import { ApiError } from "../../utils/api-error";
 import { MovieRepository } from "./movie.repository";
 
 export class MovieService {
   static async createGenre(data: { name: string }) {
     const genre = MovieRepository.createGenre(data);
     if (!genre) {
-      throw new Error("Failed to create genre");
+      throw new ApiError(400, "Failed to create genre");
     }
     return genre;
   }
@@ -14,7 +14,7 @@ export class MovieService {
   static async getGenre() {
     const genre = MovieRepository.getGenre();
     if (!genre) {
-      throw new Error("Failed to get genre");
+      throw new ApiError(400, "Failed to get genre");
     }
     return genre;
   }
@@ -22,7 +22,7 @@ export class MovieService {
   static async updateGenre(id: string, data: { name: string }) {
     const genre = MovieRepository.updateGenre(id, data);
     if (!genre) {
-      throw new Error("Failed to update genre");
+      throw new ApiError(400, "Failed to update genre");
     }
     return genre;
   }
@@ -30,7 +30,7 @@ export class MovieService {
   static async deleteGenre(id: string) {
     const genre = MovieRepository.deleteGenre(id);
     if (!genre) {
-      throw new Error("Failed to delete genre");
+      throw new ApiError(400, "Failed to delete genre");
     }
     return genre;
   }
@@ -38,7 +38,7 @@ export class MovieService {
   static async createLanguage(data: { name: string }) {
     const language = MovieRepository.createLanguage(data);
     if (!language) {
-      throw new Error("Failed to create language");
+      throw new ApiError(400, "Failed to create language");
     }
     return language;
   }
@@ -86,7 +86,7 @@ export class MovieService {
       trailerUrl: string;
       rating?: number;
     },
-    posterUrl?: string
+    posterUrl?: string,
   ) {
     const names = [...new Set(data.credits.map((c) => c.name))]; //get unique names from credits
     const existingPeople = await prisma.person.findMany({
@@ -110,57 +110,62 @@ export class MovieService {
       },
     });
     const finalMap = new Map(allPeople.map((p) => [p.name, p]));
-    return await prisma.$transaction(async (tx) => {
-      const creditData = data.credits.map((credit) => {
-        const person = finalMap.get(credit.name);
+    return await prisma.$transaction(
+      async (tx) => {
+        const creditData = data.credits.map((credit) => {
+          const person = finalMap.get(credit.name);
 
-        if (!person) {
-          throw new Error(`Person not found: ${credit.name}`);
-        }
+          if (!person) {
+            throw new Error(`Person not found: ${credit.name}`);
+          }
 
-        return {
-          personId: person.id,
-          role: credit.role,
-          characterName: credit.characterName ?? null,
-        };
-      });
+          return {
+            personId: person.id,
+            role: credit.role,
+            characterName: credit.characterName ?? null,
+          };
+        });
 
-      //create movie
-      const movie = await tx.movie.create({
-        data: {
-          title: data.title,
-          description: data.description ?? "",
-          releaseDate: new Date(data.releaseDate),
-          duration: data.duration,
-          trailerUrl: data.trailerUrl ?? "",
-          rating: data.rating ?? 0,
-          posterUrl,
-          genres: {
-            connect: data.genreIds.map((id) => ({ id })), //connect is used to connect existing genres to the movie
-          },
-          languages: {
-            connect: data.languageIds.map((id) => ({ id })), //connect is used to connect existing languages to the movie
-          },
-          credits: {
-            create: creditData,
-          },
-        },
-        include: {
-          genres: true,
-          languages: true,
-          credits: {
-            include: {
-              person: true,
+        //create movie
+        const movie = await tx.movie.create({
+          data: {
+            title: data.title,
+            description: data.description ?? "",
+            releaseDate: new Date(data.releaseDate),
+            duration: data.duration,
+            trailerUrl: data.trailerUrl ?? "",
+            rating: data.rating ?? 0,
+            posterUrl,
+            genres: {
+              connect: data.genreIds.map((id) => ({ id })), //connect is used to connect existing genres to the movie
+            },
+            languages: {
+              connect: data.languageIds.map((id) => ({ id })), //connect is used to connect existing languages to the movie
+            },
+            credits: {
+              create: creditData,
             },
           },
-        },
-      });
-      return movie;
-    },{timeout: 10000} /* Set a timeout of 10 seconds for the entire transaction */);
+          include: {
+            genres: true,
+            languages: true,
+            credits: {
+              include: {
+                person: true,
+              },
+            },
+          },
+        });
+        return movie;
+      },
+      {
+        timeout: 10000,
+      } /* Set a timeout of 10 seconds for the entire transaction */,
+    );
   }
 
-  static getAllMovies({page,limit}: {page: number, limit: number}) {
-    const movies = MovieRepository.getAllMovies({page,limit});
+  static getAllMovies({ page, limit }: { page: number; limit: number }) {
+    const movies = MovieRepository.getAllMovies({ page, limit });
     if (!movies) {
       throw new Error("Failed to get movies");
     }
@@ -195,7 +200,7 @@ export class MovieService {
       posterUrl?: string;
       trailerUrl?: string;
       duration?: number;
-    }
+    },
   ) {
     try {
       const updateData: any = {
