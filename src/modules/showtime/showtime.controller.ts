@@ -1,0 +1,63 @@
+import { Request, Response } from "express";
+import { asyncHandler } from "../../utils/async-handler";
+import { createShowtimeSchema } from "./showtime.validation";
+import { ApiError } from "../../utils/api-error";
+import { ShowtimeService } from "./showtime.service";
+import { ApiResponse } from "../../utils/api-response";
+
+/**
+ * @description  create showtime
+ */
+export const createShowtime = asyncHandler(
+  async (req: Request, res: Response) => {
+    const parsedData = createShowtimeSchema.safeParse(req.body);
+    if (!parsedData.success) {
+      throw new ApiError(
+        400,
+        "input validation failed.",
+        parsedData.error.issues,
+      );
+    }
+    const result = await ShowtimeService.createShowtime(parsedData.data);
+
+    res
+      .status(201)
+      .json(new ApiResponse(200, result, "showtime created successfully"));
+  },
+);
+
+/**
+ * @description  get all showtime
+ */
+export const getShowtimes = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { movieId, date } = req.body;
+    if (!movieId || !date) {
+      throw new ApiError(400, "movie id and date are required");
+    }
+    const result = await ShowtimeService.getShowtimes(movieId, date);
+    res
+      .status(200)
+      .json(new ApiResponse(200, result, "showtimes fetched successfully"));
+  },
+);
+
+/**
+ * @description  get showtime by id
+ */
+export const getShowtimeById = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params as { id: string };
+    const result = await ShowtimeService.getShowtimeById(id);
+    res
+      .status(200)
+      .json(new ApiResponse(200, result, "showtime fetched successfully"));
+  },
+);
+
+/**
+ * @description  delete showtime
+ */
+export const deleteShowtime = asyncHandler(
+  async (req: Request, res: Response) => {},
+);

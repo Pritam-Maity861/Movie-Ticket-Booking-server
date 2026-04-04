@@ -10,4 +10,7 @@ export const ENV={
     REFRESH_TOKEN_EXPIRIES:process.env.REFRESH_TOKEN_EXPIRIES || '7d',
     NODE_ENV:process.env.NODE_ENV || 'development',
     CLIENT_URL:process.env.CLIENT_URL || 'http://localhost:5173',
+    UPSTASH_REDIS_URL:process.env.UPSTASH_REDIS_URL || '',
+    UPSTASH_REDIS_TOKEN:process.env.UPSTASH_REDIS_TOKEN || '',
+    
 }
