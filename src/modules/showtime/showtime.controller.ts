@@ -47,8 +47,8 @@ export const getShowtimes = asyncHandler(
  */
 export const getShowtimeById = asyncHandler(
   async (req: Request, res: Response) => {
-    const { id } = req.params as { id: string };
-    const result = await ShowtimeService.getShowtimeById(id);
+    const { id } = req.params;
+    const result = await ShowtimeService.getShowtimeById(id as string);
     res
       .status(200)
       .json(new ApiResponse(200, result, "showtime fetched successfully"));

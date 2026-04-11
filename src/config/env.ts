@@ -12,5 +12,6 @@ export const ENV={
     CLIENT_URL:process.env.CLIENT_URL || 'http://localhost:5173',
     UPSTASH_REDIS_URL:process.env.UPSTASH_REDIS_URL || '',
     UPSTASH_REDIS_TOKEN:process.env.UPSTASH_REDIS_TOKEN || '',
-    
+    RAZORPAY_KEY_ID:process.env.RAZORPAY_Test_API_Key || '',
+    RAZORPAY_KEY_SECRET:process.env.REZORPAY_Test_Key_Secret || '',
 }

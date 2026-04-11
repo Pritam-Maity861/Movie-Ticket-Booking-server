@@ -61,7 +61,15 @@ export class ShowtimeRepository {
       include: {
         screen: {
           include: {
-            theater: true,
+            theater: {
+              select:{
+                id:true,
+                name:true,
+                city:true,
+                address:true,
+                ratting:true
+              }
+            },
             seats: true,
           },
         },
@@ -87,9 +95,13 @@ export class ShowtimeRepository {
             },
           },
         },
-        bookingSeats: true,
+        bookingSeats: {
+          include:{
+            booking:true,
+          }
+        },
         seatPricings: true,
       },
-    });
+    }); 
   }
 }

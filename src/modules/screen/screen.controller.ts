@@ -4,10 +4,8 @@ import { createScreenSchema } from "./screen.validation";
 import { ApiError } from "../../utils/api-error";
 import { ScreenServices } from "./screen.service";
 import { ApiResponse } from "../../utils/api-response";
-import { ScreenRepository } from "./screen.repository";
 
 export const addScreen = asyncHandler(async (req: Request, res: Response) => {
-  //addscreen logic
   const parsedData = createScreenSchema.safeParse(req.body);
   if (!parsedData.success) {
     throw new ApiError(400, "validation Error", parsedData.error.issues);
