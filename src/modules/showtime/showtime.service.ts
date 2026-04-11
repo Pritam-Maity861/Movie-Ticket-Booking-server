@@ -97,7 +97,10 @@ export class ShowtimeService {
           theaterId: theater.id,
           theaterName: theater.name,
           screens: [],
-          seats: screen.seats,
+          // seats: screen.seats,
+          city:theater.city,
+          address:theater.address,
+          ratting:theater.ratting,
         });
       }
 
@@ -112,6 +115,7 @@ export class ShowtimeService {
           screenId: screen.id,
           screenName: screen.name,
           showtimes: [],
+
         };
         theaterEntry.screens.push(screenEntry);
       }

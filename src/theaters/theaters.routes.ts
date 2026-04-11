@@ -4,7 +4,7 @@ import { authMiddleware } from "../middleware/auth.middleware";
 
 const theaterRouter = Router();
 
-theaterRouter.post("/add-theater",authMiddleware, addTheatr);
+theaterRouter.post("/add-theater", addTheatr);
 theaterRouter.get("/", getTheaters);
 theaterRouter.get("/:id", getTheaterById);
 theaterRouter.patch("/theaters/:id",authMiddleware, updateTheater);
