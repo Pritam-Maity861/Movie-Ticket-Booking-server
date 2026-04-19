@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createGenre, createLanguage, createMovie, DeleteGnere, DeleteLanguage, deleteMovie, getAllmovies, getGenre, getLanguage, getMovieById, updateGenre, updateLanguage, updateMovie } from "./movie.controller";
+import { createGenre, createLanguage, createMovie, DeleteGnere, DeleteLanguage, deleteMovie, getAllmovies, getAllmoviesWithoutPagination, getGenre, getLanguage, getMovieById, updateGenre, updateLanguage, updateMovie } from "./movie.controller";
 import { authMiddleware } from "../../middleware/auth.middleware";
 import upload from "../../middleware/multer.middleware";
 
@@ -20,7 +20,8 @@ movieRouter.delete("/delete-language/:id",authMiddleware,DeleteLanguage);
 
 //movie routes
 movieRouter.post("/add-movie",upload.single("posterUrl"),createMovie);
-movieRouter.get("/get-all-movie",getAllmovies);
+movieRouter.get("/get-all-movie",getAllmovies);//with pagination 
+movieRouter.get("/get-all",getAllmoviesWithoutPagination);//without pagination
 movieRouter.patch("/update-movie/:id",upload.single("posterUrl"),updateMovie);
 movieRouter.delete("/delete-movie/:id",authMiddleware,deleteMovie);
 movieRouter.get("/get-movie/:id",getMovieById);

@@ -161,6 +161,11 @@ export const getAllmovies=asyncHandler(async(req,res)=>{
   res.status(200).json(new ApiResponse(200,result,"Movies fetched successfully"));
 });
 
+export const getAllmoviesWithoutPagination=asyncHandler(async(req,res)=>{
+  const result=await MovieService.getAllMoviesWithoutPagination();
+  res.status(200).json(new ApiResponse(200,result,"Movies fetched successfully"));
+});
+
 
 
 export const getMovieById=asyncHandler(async(req,res)=>{

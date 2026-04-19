@@ -9,6 +9,4 @@ screenRouter.post("/create-screen",addScreen);
 screenRouter.get("/screens",getScreenByTheater);
 
 
-
-
 export default screenRouter;

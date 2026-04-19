@@ -117,6 +117,23 @@ export class MovieRepository{
         }
       }
 
+      static getAllMoviesWithoutPagination(){
+        return prisma.movie.findMany({
+            orderBy:{
+                createdAt:'desc'
+            },
+            include:{
+                languages:true,
+                genres:true,
+                credits:{
+                    include:{
+                        person:true
+                    }
+                }
+            }
+        });
+      }
+
       static getMovieById(id:string){
         return prisma.movie.findUnique({
             where:{

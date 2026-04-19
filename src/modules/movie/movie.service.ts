@@ -172,6 +172,14 @@ export class MovieService {
     return movies;
   }
 
+  static getAllMoviesWithoutPagination(){
+    const movies = MovieRepository.getAllMoviesWithoutPagination();
+    if (!movies) {
+      throw new Error("Failed to get movies");
+    }
+    return movies;
+  }
+
   static getMovieById(id: string) {
     const movie = MovieRepository.getMovieById(id);
     if (!movie) {
