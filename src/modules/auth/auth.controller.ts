@@ -32,7 +32,7 @@ export const signUp = asyncHandler(async (req: Request, res: Response) => {
   res.cookie("refreshToken", result.refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production", // Set secure flag in production
-    sameSite: "strict",
+    sameSite: "none",
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 
@@ -70,7 +70,7 @@ export const signIn = asyncHandler(async (req: Request, res: Response) => {
   res.cookie("refreshToken", result.refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production", // Set secure flag in production
-    sameSite: "strict",
+    sameSite: "none",
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 
@@ -105,7 +105,7 @@ export const refreshToken = asyncHandler(
     res.cookie("refreshToken", result.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "none",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -134,14 +134,14 @@ export const logOut = asyncHandler(async (req: AuthRequest, res: Response) => {
   // res.cookie("refreshToken","",{
   //   httpOnly:true,
   //   secure:process.env.NODE_ENV==="production",
-  //   sameSite:"strict",
+  //   sameSite:"none",
   //   expires:new Date(0), // Set the cookie to expire immediately
   // })
 
   res.clearCookie("refreshToken", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: "none",
   });
 
   res
@@ -161,7 +161,7 @@ export const logOutAllDevices = asyncHandler(
     res.clearCookie("refreshToken", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "none",
     });
     res
       .status(200)
