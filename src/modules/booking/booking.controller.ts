@@ -5,6 +5,8 @@ import { bookingPayloadSchema } from "./booking.validation";
 import { BookingService } from "./booking.service";
 import { ApiResponse } from "../../utils/api-response";
 
+
+// create pending booking (before payment confirmation)
 export const pendingBooking = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = (req as any).user?.userId;
@@ -34,6 +36,8 @@ export const pendingBooking = asyncHandler(
   },
 );
 
+
+// get my bookings(user specific bookings)
 export const getMyBookings = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = (req as any).user?.userId;
@@ -49,6 +53,9 @@ export const getMyBookings = asyncHandler(
   },
 );
 
+
+
+//get booking by ID
 export const getBooking = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const booking = await BookingService.getBookingById(id as string);
@@ -59,3 +66,13 @@ export const getBooking = asyncHandler(async (req: Request, res: Response) => {
     .status(200)
     .json(new ApiResponse(200, booking, "Booking fetched successfully"));
 });
+
+
+//get all bookings (admin only)
+export const getAllBookings=asyncHandler(async(req:Request,res:Response)=>{
+  const bookings=await BookingService.getAllBookings();
+  if(!bookings){
+    throw new ApiError(404,"No bookings found");
+  }
+  res.status(200).json(new ApiResponse(200,bookings,"All bookings fetched successfully"));
+})

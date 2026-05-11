@@ -1,4 +1,5 @@
 import { prisma } from "../../config/prisma";
+import { ApiError } from "../../utils/api-error";
 
 export class MovieRepository{
     static createGenre(data:{name:string}){
@@ -173,6 +174,14 @@ export class MovieRepository{
           duration?: number;
         }
       ) {
+        const existingMovie=await prisma.movie.findUnique({
+            where:{
+                id
+            }
+        });
+        if(!existingMovie){
+            throw new ApiError(404,'Movie not found');
+        }
         const updateData: any = {
           ...(data.title !== undefined && { title: data.title }),
           ...(data.description !== undefined && { description: data.description }),

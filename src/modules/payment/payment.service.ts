@@ -5,6 +5,7 @@ import { razorpay } from "../../config/razorpay";
 import { ApiError } from "../../utils/api-error";
 import crypto from "crypto";
 import { redisServiceses } from "../../services/seatLock.service";
+import { PaymentRepository } from "./payment.repository";
 
 export class PaymentService {
   static async createRazorpayOrder(bookingId: string, userId: string) {
@@ -128,5 +129,25 @@ export class PaymentService {
     return{
         success:true
     }
+  }
+
+
+
+  static async getAllPayments(){
+    const paymentsData=await PaymentRepository.getAllPayments();
+    if(!paymentsData || paymentsData.length===0){
+        throw new ApiError(404,"No payments found");
+    }
+    return paymentsData;
+  }
+  static async getPaymentByID(paymentId:string){
+    if(!paymentId){
+        throw new ApiError(400,"Payment ID is required");
+    }
+    const paymentsData=await PaymentRepository.getPaymentsByID(paymentId);
+    if(!paymentsData){
+        throw new ApiError(404,"Payment data not found");
+    }
+    return paymentsData;
   }
 }

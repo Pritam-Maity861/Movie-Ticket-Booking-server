@@ -18,8 +18,8 @@ export class AuthService {
       regUser.name,
     );
 
-    const accessToken=generateAccessToken(user.id,user.role,user.email);
-    const refreshToken=generateRefreshToken(user.id);
+    const accessToken = generateAccessToken(user.id, user.role, user.email);
+    const refreshToken = generateRefreshToken(user.id);
 
     //hash the refresh token before storing it in the database for security
     const hashedRefreshToken = crypto
@@ -33,7 +33,6 @@ export class AuthService {
       regUser.userAgent,
       regUser.device,
     );
-
 
     return {
       accessToken: accessToken,
@@ -138,13 +137,12 @@ export class AuthService {
     };
   }
 
-  static async logOut(refreshToken:string) {
-    const validToken=await AuthRepository.findValidRefreshToken(refreshToken);
-    if(!validToken){
+  static async logOut(refreshToken: string) {
+    const validToken = await AuthRepository.findValidRefreshToken(refreshToken);
+    if (!validToken) {
       throw new Error("Invalid refresh token");
     }
     await AuthRepository.revokeRefreshToken(validToken.id);
-
   }
 
   static async getCurrentUser(userId: string) {
@@ -163,5 +161,19 @@ export class AuthService {
 
   static async logOutAllDevices(userId: string) {
     await AuthRepository.revokeAllRefreshTokensForUser(userId);
+  }
+
+  static async updateProfile(
+    userId: string,
+    data: { name?: string; profilePicUrl?: string },
+  ) {
+    const user = await AuthRepository.updateUser(userId, data);
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      profilePic: user.profilePicUrl,
+    };
   }
 }

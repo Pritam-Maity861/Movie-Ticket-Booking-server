@@ -5,6 +5,8 @@ import { asyncHandler } from "../../utils/async-handler";
 import { AuthService } from "./auth.service";
 import { ApiResponse } from "../../utils/api-response";
 import { AuthRequest } from "./auth.types";
+import { uploadToCloudinary } from "../../lib/cloudinery";
+import fs from "fs";
 
 /**
  * @description Sign up a new user
@@ -188,3 +190,47 @@ export const getMe = asyncHandler(async (req: AuthRequest, res: Response) => {
 
   res.status(200).json(new ApiResponse(200, user));
 });
+
+/**
+ * @description update user profile details
+ * @param req
+ * @param res
+ */
+export const updateProfile = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    if (!req.user?.userId) {
+      throw new ApiError(401, "Unauthorized");
+    }
+
+    const { name } = req.body;
+    let profilePicUrl = undefined;
+
+    if (req.file) {
+      try {
+        profilePicUrl = await uploadToCloudinary(
+          req.file.path,
+          req.file.originalname,
+        );
+
+        // cleanup temp file after uploadToCloudinary (redundant as uploadToCloudinary does it, but safe)
+        if (fs.existsSync(req.file.path)) {
+          fs.unlinkSync(req.file.path);
+        }
+      } catch (error) {
+        if (req.file && fs.existsSync(req.file.path)) {
+          fs.unlinkSync(req.file.path);
+        }
+        throw new ApiError(500, "Profile picture upload failed");
+      }
+    }
+
+    const updatedUser = await AuthService.updateProfile(req.user.userId, {
+      name,
+      profilePicUrl,
+    });
+
+    res
+      .status(200)
+      .json(new ApiResponse(200, updatedUser, "Profile updated successfully"));
+  },
+);

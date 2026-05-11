@@ -2,6 +2,7 @@ import { prisma } from "../../config/prisma";
 import { redis } from "../../config/redis";
 import { redisServiceses } from "../../services/seatLock.service";
 import { ApiError } from "../../utils/api-error";
+import { BookingRepository } from "./booking.repository";
 
 export class BookingService {
   static async createPendingBooking(
@@ -152,7 +153,7 @@ export class BookingService {
 
     throw error;
   }
-}
+  }
 
   static async getUserBookings(userId: string) {
     return await prisma.booking.findMany({
@@ -206,5 +207,15 @@ export class BookingService {
         },
       },
     });
+  }
+
+
+  static async getAllBookings(){
+    const bookings=await BookingRepository.getAllBookings();
+    if(!bookings){
+      throw new ApiError(404,"No bookings found");
+    }
+
+    return bookings;
   }
 }

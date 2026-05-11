@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authMiddleware } from "../../middleware/auth.middleware";
-import { PaymentController, PaymentVerifyController } from "./payment.controller";
+import { getAllPayments, getPaymentsById, PaymentController, PaymentVerifyController } from "./payment.controller";
 
 const paymentRouter = Router();
 
@@ -9,6 +9,11 @@ paymentRouter.post("/create-order",authMiddleware,PaymentController);
 
 //payment verify
 paymentRouter.post("/verify",PaymentVerifyController);
+
+
+//get all payment
+paymentRouter.get("/get-all-payments",getAllPayments);
+paymentRouter.get("/get-payments/:id",getPaymentsById);
 
 
 
