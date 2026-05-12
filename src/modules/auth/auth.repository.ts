@@ -138,4 +138,16 @@ export class AuthRepository {
       data,
     });
   }
+
+  static UpdateUserPassword(
+    userId:string,
+    hashPass:string
+  ){
+    return prisma.user.update({
+      where:{id:userId},
+      data:{
+        password:hashPass
+      }
+    })
+  }
 }

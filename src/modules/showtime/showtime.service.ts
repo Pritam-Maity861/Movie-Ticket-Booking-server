@@ -98,9 +98,9 @@ export class ShowtimeService {
           theaterName: theater.name,
           screens: [],
           // seats: screen.seats,
-          city:theater.city,
-          address:theater.address,
-          ratting:theater.ratting,
+          city: theater.city,
+          address: theater.address,
+          ratting: theater.ratting,
         });
       }
 
@@ -115,7 +115,6 @@ export class ShowtimeService {
           screenId: screen.id,
           screenName: screen.name,
           showtimes: [],
-
         };
         theaterEntry.screens.push(screenEntry);
       }
@@ -136,5 +135,24 @@ export class ShowtimeService {
       throw new ApiError(404, "Showtime not found");
     }
     return showtime;
+  }
+
+  static async getShowtimesByScreenId(screenId: string) {
+    return await ShowtimeRepository.getShowtimesByScreenId(screenId);
+  }
+
+  static async deleteShowtime(id: string) {
+    const showtime = await ShowtimeRepository.getShowtimeById(id);
+    if (!showtime) {
+      throw new ApiError(404, "Showtime not found");
+    }
+
+    // Optional: Check if there are confirmed bookings before deleting
+    // const hasConfirmedBookings = showtime.bookings.some(b => b.status === 'CONFIRMED');
+    // if (hasConfirmedBookings) {
+    //   throw new ApiError(400, "Cannot delete showtime with confirmed bookings");
+    // }
+
+    return await ShowtimeRepository.deleteShowtime(id);
   }
 }

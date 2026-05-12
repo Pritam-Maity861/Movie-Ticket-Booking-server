@@ -6,6 +6,7 @@ import {
   refreshToken,
   signIn,
   signUp,
+  updatePassword,
   updateProfile,
 } from "./auth.controller";
 import { authMiddleware } from "../../middleware/auth.middleware";
@@ -25,5 +26,5 @@ authRouter.patch(
   upload.single("profilePicUrl"),
   updateProfile,
 );
-
+authRouter.patch("/update-password",authMiddleware,updatePassword)
 export default authRouter;

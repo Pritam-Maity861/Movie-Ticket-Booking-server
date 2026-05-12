@@ -19,10 +19,10 @@ movieRouter.patch("/update-language/:id",authMiddleware,updateLanguage);
 movieRouter.delete("/delete-language/:id",authMiddleware,DeleteLanguage);
 
 //movie routes
-movieRouter.post("/add-movie",upload.single("posterUrl"),createMovie);
+movieRouter.post("/add-movie",authMiddleware,upload.single("posterUrl"),createMovie);
 movieRouter.get("/get-all-movie",getAllmovies);//with pagination 
 movieRouter.get("/get-all",getAllmoviesWithoutPagination);//without pagination
-movieRouter.patch("/update-movie/:id",upload.single("posterUrl"),updateMovie);
+movieRouter.patch("/update-movie/:id",authMiddleware,upload.single("posterUrl"),updateMovie);
 movieRouter.delete("/delete-movie/:id",authMiddleware,deleteMovie);
 movieRouter.get("/get-movie/:id",getMovieById);
 

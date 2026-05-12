@@ -177,4 +177,32 @@ export class AuthService {
       profilePic: user.profilePicUrl,
     };
   }
+
+  static async UpdatePassword(
+    userId:string,
+    currPass:string,
+    newPass:string
+  ){
+    const user=await AuthRepository.findUserById(userId);
+    if(!user){
+      throw new ApiError(404,"User not found");
+    }
+    const existingUser=await AuthRepository.findUserByEmail(user.email);
+    if(!existingUser){
+      throw new ApiError(404,"Email not found");
+    }
+    const isPasswordValid=await compareHash(currPass,existingUser.password);
+    if(!isPasswordValid){
+      throw new ApiError(401,"Invalid current password");
+    }
+    const hashedPassword=await hashData(newPass);
+    await AuthRepository.UpdateUserPassword(userId,hashedPassword);
+    return {
+      id:user.id,
+      email:user.email,
+      name:user.name,
+      role:user.role,
+      profilePic:user.profilePicUrl,
+    };
+  }
 }

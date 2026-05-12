@@ -62,13 +62,13 @@ export class ShowtimeRepository {
         screen: {
           include: {
             theater: {
-              select:{
-                id:true,
-                name:true,
-                city:true,
-                address:true,
-                ratting:true
-              }
+              select: {
+                id: true,
+                name: true,
+                city: true,
+                address: true,
+                ratting: true,
+              },
             },
             seats: true,
           },
@@ -96,12 +96,35 @@ export class ShowtimeRepository {
           },
         },
         bookingSeats: {
-          include:{
-            booking:true,
-          }
+          include: {
+            booking: true,
+          },
         },
         seatPricings: true,
       },
-    }); 
+    });
+  }
+
+  static async getShowtimesByScreenId(screenId: string) {
+    return prisma.showtime.findMany({
+      where: {
+        screenId,
+      },
+      include: {
+        movie: true,
+        seatPricings: true,
+      },
+      orderBy: {
+        startTime: "desc",
+      },
+    });
+  }
+
+  static async deleteShowtime(id: string) {
+    return prisma.showtime.delete({
+      where: {
+        id,
+      },
+    });
   }
 }

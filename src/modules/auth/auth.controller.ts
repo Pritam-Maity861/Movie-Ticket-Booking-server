@@ -234,3 +234,16 @@ export const updateProfile = asyncHandler(
       .json(new ApiResponse(200, updatedUser, "Profile updated successfully"));
   },
 );
+
+/**
+ * @description change password using current password
+ */
+
+export const updatePassword=asyncHandler(async(req:AuthRequest,res:Response)=>{
+  if(!req.user?.userId){
+    throw new ApiError(401,"Unauthorized");
+  }
+  const {currentPassword,newPassword}=req.body;
+  const updatedUser=await AuthService.UpdatePassword(req.user.userId,currentPassword,newPassword);
+  res.status(200).json(new ApiResponse(200,updatedUser,"Password updated successfully"));
+})

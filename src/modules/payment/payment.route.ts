@@ -12,8 +12,8 @@ paymentRouter.post("/verify",PaymentVerifyController);
 
 
 //get all payment
-paymentRouter.get("/get-all-payments",getAllPayments);
-paymentRouter.get("/get-payments/:id",getPaymentsById);
+paymentRouter.get("/get-all-payments",authMiddleware,getAllPayments);
+paymentRouter.get("/get-payments/:id",authMiddleware,getPaymentsById);
 
 
 

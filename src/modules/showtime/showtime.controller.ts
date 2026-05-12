@@ -56,8 +56,35 @@ export const getShowtimeById = asyncHandler(
 );
 
 /**
+ * @description  get showtimes by screen id
+ */
+export const getShowtimesByScreenId = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { screenId } = req.params;
+    if (!screenId) {
+      throw new ApiError(400, "screen id is required");
+    }
+    const result = await ShowtimeService.getShowtimesByScreenId(
+      screenId as string,
+    );
+    res
+      .status(200)
+      .json(new ApiResponse(200, result, "showtimes fetched successfully"));
+  },
+);
+
+/**
  * @description  delete showtime
  */
 export const deleteShowtime = asyncHandler(
-  async (req: Request, res: Response) => {},
+  async (req: Request, res: Response) => {
+    const { id } = req.query;
+    if (!id) {
+      throw new ApiError(400, "showtime id is required");
+    }
+    await ShowtimeService.deleteShowtime(id as string);
+    res
+      .status(200)
+      .json(new ApiResponse(200, null, "showtime deleted successfully"));
+  },
 );
