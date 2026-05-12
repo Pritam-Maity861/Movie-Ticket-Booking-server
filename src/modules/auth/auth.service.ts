@@ -3,12 +3,13 @@ import { loginUser, registerUser } from "./auth.types";
 import { AuthRepository } from "./auth.repository";
 import { generateAccessToken, generateRefreshToken } from "../../utils/jwt";
 import crypto from "crypto";
+import { ApiError } from "../../utils/api-error";
 
 export class AuthService {
   static async registerUser(regUser: registerUser) {
     const existingUser = await AuthRepository.findUserByEmail(regUser.email);
     if (existingUser) {
-      throw new Error("User already exists with this email");
+      throw new ApiError(400, "User already exists with this email");
     }
     const hashedPassword = await hashData(regUser.password);
 
@@ -50,14 +51,14 @@ export class AuthService {
   static async loginUser(loginUser: loginUser) {
     const existingUser = await AuthRepository.findUserByEmail(loginUser.email);
     if (!existingUser) {
-      throw new Error("Invalid credentials");
+      throw new ApiError(401, "Invalid credentials");
     }
     const isPasswordValid = await compareHash(
       loginUser.password,
       existingUser.password,
     );
     if (!isPasswordValid) {
-      throw new Error("Invalid credentials");
+      throw new ApiError(401, "Invalid credentials");
     }
     const AccessToken = generateAccessToken(
       existingUser.id,
@@ -98,7 +99,7 @@ export class AuthService {
     const validToken = await AuthRepository.findValidRefreshToken(refreshToken);
 
     if (!validToken) {
-      throw new Error("Invalid or expired refresh token");
+      throw new ApiError(401, "Invalid or expired refresh token");
     }
 
     const AccessToken = generateAccessToken(
@@ -140,7 +141,7 @@ export class AuthService {
   static async logOut(refreshToken: string) {
     const validToken = await AuthRepository.findValidRefreshToken(refreshToken);
     if (!validToken) {
-      throw new Error("Invalid refresh token");
+      throw new ApiError(401, "Invalid refresh token");
     }
     await AuthRepository.revokeRefreshToken(validToken.id);
   }
@@ -148,7 +149,7 @@ export class AuthService {
   static async getCurrentUser(userId: string) {
     const user = await AuthRepository.findUserById(userId);
     if (!user) {
-      throw new Error("User not found");
+      throw new ApiError(404, "User not found");
     }
     return {
       id: user.id,
