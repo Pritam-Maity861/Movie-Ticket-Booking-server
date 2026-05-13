@@ -11,7 +11,7 @@ A premium, full-stack movie booking platform featuring real-time seat selection,
 
 ## 🔗 Live Demo
 
-**Check out the live application here:** [Live Demo Link](https://your-live-link-here.com)
+**Check out the live application here:** [Live Demo Link](https://chobighor.vercel.app/)
 
 ---
 
@@ -82,3 +82,7 @@ A premium, full-stack movie booking platform featuring real-time seat selection,
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+⭐️ Thanks for visiting my project! Feel free to explore the code and try out the live demo above.
+---
