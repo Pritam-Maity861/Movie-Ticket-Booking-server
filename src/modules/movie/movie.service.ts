@@ -1,5 +1,7 @@
 import { prisma } from "../../config/prisma";
+import { redis } from "../../config/redis";
 import { ApiError } from "../../utils/api-error";
+import { CACHE_KEYS, deleteByPattern, MOVIE_CACHE_TTL } from "../../utils/cache-utility";
 import { MovieRepository } from "./movie.repository";
 
 export class MovieService {
@@ -65,6 +67,26 @@ export class MovieService {
       throw new Error("Failed to delete language");
     }
     return language;
+  }
+
+
+  /**
+   * @description clear movie cache
+   */
+  private static async clearMovieCache(movieId?: string){
+     try {
+    const tasks: Promise<any>[] = [
+      redis.del(CACHE_KEYS.ALL_MOVIES),            // Clears the single "all movies" list
+      deleteByPattern(CACHE_KEYS.PAGINATED_MOVIES) // Clears ALL paginated cache keys (page 1, 2, 3...)
+    ];
+    if (movieId) {
+      tasks.push(redis.del(CACHE_KEYS.MOVIE_BY_ID(movieId))); // Clears specific movie detail
+    }
+    await Promise.all(tasks);
+    console.log("Movie cache successfully invalidated");
+  } catch (error) {
+    console.error("Failed to clear movie cache:", error);
+  }
   }
 
   /**
@@ -156,6 +178,8 @@ export class MovieService {
             },
           },
         });
+        //clear cache for successful movie creation
+        await this.clearMovieCache();
         return movie;
       },
       {
@@ -164,35 +188,64 @@ export class MovieService {
     );
   }
 
-  static getAllMovies({ page, limit }: { page: number; limit: number }) {
-    const movies = MovieRepository.getAllMovies({ page, limit });
+  static async getAllMovies({ page, limit }: { page: number; limit: number }) {
+    const cacheKey = `movies:page:${page}:limit:${limit}`;
+     const cachedData = await redis.get(cacheKey);
+    if (cachedData) return JSON.parse(cachedData);
+    const movies = await MovieRepository.getAllMovies({ page, limit });
     if (!movies) {
       throw new Error("Failed to get movies");
     }
+    await redis.setex(cacheKey, 3600, JSON.stringify(movies));
     return movies;
   }
 
-  static getAllMoviesWithoutPagination(){
-    const movies = MovieRepository.getAllMoviesWithoutPagination();
+  static async getAllMoviesWithoutPagination() {
+    const cacheKey = CACHE_KEYS.ALL_MOVIES;
+    //  await redis.del(cacheKey);
+    //try to fetch from redis
+    const cacheMovies = await redis.get(cacheKey);
+    // console.log(cacheMovies)
+    if (cacheMovies) {
+      return JSON.parse(cacheMovies);
+    }
+
+    //cache miss : fetch from db
+    const movies = await MovieRepository.getAllMoviesWithoutPagination();
     if (!movies) {
       throw new Error("Failed to get movies");
     }
+    //store in redis
+    await redis.setex(cacheKey, MOVIE_CACHE_TTL, JSON.stringify(movies));
+    // console.log("movies:",movies);
     return movies;
   }
 
-  static getMovieById(id: string) {
-    const movie = MovieRepository.getMovieById(id);
+  static async getMovieById(id: string) {
+    const cacheKey = CACHE_KEYS.MOVIE_BY_ID(id);
+    //try to fetch from redis
+    const cacheMovie = await redis.get(cacheKey);
+    if (cacheMovie) {
+      return JSON.parse(cacheMovie);
+    }
+    //cache miss : fetch from db
+    const movie = await MovieRepository.getMovieById(id);
     if (!movie) {
       throw new Error("Failed to get movie");
     }
+    //store in redis for next time
+    await redis.setex(cacheKey, MOVIE_CACHE_TTL, JSON.stringify(movie));
+
     return movie;
   }
 
-  static deleteMovie(id: string) {
-    const deletedMovie = MovieRepository.deleteMovie(id);
+  static async deleteMovie(id: string) {
+    const deletedMovie = await MovieRepository.deleteMovie(id);
     if (!deletedMovie) {
       throw new Error("Failed to delete movie");
     }
+    //clear the cache for the deleted movie and the "all movies" list
+    await this.clearMovieCache(id);
     return deletedMovie;
   }
 
@@ -228,6 +281,11 @@ export class MovieService {
       };
 
       const updatedMovie = await MovieRepository.updateMovie(id, updateData);
+
+      if (updatedMovie) {
+        //clear the cache for the updated movie and the "all movies" list and all the paginations from redis
+        await this.clearMovieCache(id);
+      } 
 
       return updatedMovie;
     } catch (error) {
