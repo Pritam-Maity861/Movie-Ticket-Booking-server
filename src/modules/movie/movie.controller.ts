@@ -129,6 +129,7 @@ export const createMovie = asyncHandler(async (req, res) => {
   const parsedData = createMovieSchema.safeParse(parsedBody);
 
   if (!parsedData.success) {
+    console.log("Validation Errors:", parsedData.error.format());
     throw new ApiError(400, "Validation failed", parsedData.error.issues);
   }
 
