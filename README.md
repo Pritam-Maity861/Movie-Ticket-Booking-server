@@ -38,8 +38,8 @@ A premium, full-stack movie booking platform featuring real-time seat selection,
 
 - **Frontend:** React 19, Vite, Tailwind CSS v4, Material UI, TanStack Query, Zustand
 - **Backend:** Node.js, Express, TypeScript, Zod (Validation)
-- **Database:** PostgreSQL (via Prisma ORM), Redis (Caching), MongoDB
-- **Services:** Razorpay (Payments), Cloudinary (Media), Clerk (Auth)
+- **Database:** PostgreSQL (via Prisma ORM), Redis (Caching)
+- **Services:** Razorpay (Payments), Cloudinary (Media)
 
 ---
 
