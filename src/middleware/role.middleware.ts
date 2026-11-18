@@ -19,3 +19,4 @@ export const requireRoles = (allowedRoles: string[]) => {
   };
 };
 
+export const requireRole = requireRoles;

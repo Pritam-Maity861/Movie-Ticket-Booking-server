@@ -100,7 +100,16 @@ export class BookingService {
         );
       }
 
-      // REMOVED deleteMany (avoid locks + slowdown)
+      // Reclaim seat slots from stale EXPIRED or CANCELLED bookings if re-booked:
+      await tx.bookingSeat.deleteMany({
+        where: {
+          showtimeId,
+          seatId: { in: seatIds },
+          booking: {
+            status: { in: ["EXPIRED", "CANCELLED"] },
+          },
+        },
+      });
 
       // Create booking
       const newBooking = await tx.booking.create({
