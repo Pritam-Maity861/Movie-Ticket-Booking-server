@@ -12,7 +12,13 @@ const app = express();
 app.set("trust proxy", 1);
 
 // Middleware
-app.use(express.json());
+app.use(
+  express.json({
+    verify: (req: any, _res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(cors({ origin: ENV.CLIENT_URL, credentials: true }));

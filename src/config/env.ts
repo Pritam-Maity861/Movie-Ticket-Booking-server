@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
-dotenv.config();
+import path from 'path';
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 export const ENV={
     PORT: process.env.PORT || 3000,
@@ -14,4 +15,5 @@ export const ENV={
     UPSTASH_REDIS_TOKEN:process.env.UPSTASH_REDIS_TOKEN || '',
     RAZORPAY_KEY_ID:process.env.RAZORPAY_Test_API_Key || '',
     RAZORPAY_KEY_SECRET:process.env.REZORPAY_Test_Key_Secret || '',
+    RAZORPAY_WEBHOOK_SECRET:process.env.RAZORPAY_WEBHOOK_SECRET || process.env.REZORPAY_Test_Key_Secret || '',
 }

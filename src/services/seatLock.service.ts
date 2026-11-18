@@ -26,6 +26,7 @@ export class redisServiceses {
 
   //releasing lock from redis
   static async releaseSeats(showtimeId: string, seatIds: string[]) {
+    if (!seatIds || seatIds.length === 0) return;
     const keys = seatIds.map((id) => `lock:showtime:${showtimeId}:seat:${id}`);
     await redis.del(...keys);
   }

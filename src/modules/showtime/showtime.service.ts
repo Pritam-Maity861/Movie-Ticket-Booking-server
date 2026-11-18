@@ -1,4 +1,5 @@
 import { prisma } from "../../config/prisma";
+import { redis } from "../../config/redis";
 import { ApiError } from "../../utils/api-error";
 import { MovieRepository } from "../movie/movie.repository";
 import { ScreenRepository } from "../screen/screen.repository";
@@ -134,7 +135,50 @@ export class ShowtimeService {
     if (!showtime) {
       throw new ApiError(404, "Showtime not found");
     }
-    return showtime;
+
+    const bookedSeatIds = new Set<string>();
+    const lockedSeatIds = new Set<string>();
+
+    // 1. Process DB bookings
+    if (showtime.bookingSeats) {
+      const now = new Date();
+      for (const bs of showtime.bookingSeats) {
+        if (bs.booking.status === "CONFIRMED") {
+          bookedSeatIds.add(bs.seatId);
+        } else if (
+          bs.booking.status === "PENDING" &&
+          bs.booking.expiresAt &&
+          new Date(bs.booking.expiresAt) > now
+        ) {
+          lockedSeatIds.add(bs.seatId);
+        }
+      }
+    }
+
+    // 2. Process active Redis seat locks
+    if (showtime.screen?.seats && showtime.screen.seats.length > 0) {
+      const allSeatIds = showtime.screen.seats.map((s) => s.id);
+      const redisKeys = allSeatIds.map(
+        (seatId) => `lock:showtime:${id}:seat:${seatId}`,
+      );
+      if (redisKeys.length > 0) {
+        const lockValues = await redis.mget(...redisKeys);
+        lockValues.forEach((val, idx) => {
+          if (val !== null) {
+            const seatId = allSeatIds[idx];
+            if (!bookedSeatIds.has(seatId)) {
+              lockedSeatIds.add(seatId);
+            }
+          }
+        });
+      }
+    }
+
+    return {
+      ...showtime,
+      bookedSeatIds: Array.from(bookedSeatIds),
+      lockedSeatIds: Array.from(lockedSeatIds),
+    };
   }
 
   static async getShowtimesByScreenId(screenId: string) {
