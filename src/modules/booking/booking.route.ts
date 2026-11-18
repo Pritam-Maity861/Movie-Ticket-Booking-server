@@ -6,12 +6,18 @@ import {
   getAllBookings,
 } from "./booking.controller";
 import { authMiddleware } from "../../middleware/auth.middleware";
+import { requireRoles } from "../../middleware/role.middleware";
 
 const bookingRouter = Router();
 
 bookingRouter.post("/pending-booking", authMiddleware, pendingBooking);
 bookingRouter.get("/my-bookings", authMiddleware, getMyBookings);
-bookingRouter.get("/get-all-bookings",authMiddleware, getAllBookings);
+bookingRouter.get(
+  "/get-all-bookings",
+  authMiddleware,
+  requireRoles(["ADMIN", "SUPER_ADMIN"]),
+  getAllBookings,
+);
 bookingRouter.get("/:id", authMiddleware, getBooking);
 
 export default bookingRouter;

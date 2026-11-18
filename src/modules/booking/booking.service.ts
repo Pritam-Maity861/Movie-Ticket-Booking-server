@@ -3,6 +3,7 @@ import { redis } from "../../config/redis";
 import { redisServiceses } from "../../services/seatLock.service";
 import { ApiError } from "../../utils/api-error";
 import { BookingRepository } from "./booking.repository";
+import { AuthUser } from "../../types/express";
 
 export class BookingService {
   static async createPendingBooking(
@@ -183,6 +184,50 @@ export class BookingService {
     });
   }
 
+  /**
+   * Authorized booking retrieval enforcing ownership at the database level.
+   * - Normal USER: queries by { id: bookingId, userId: authUser.userId }
+   * - ADMIN / SUPER_ADMIN: queries across all users by { id: bookingId }
+   * Returns null if non-existent or unauthorized.
+   */
+  static async getBookingByIdForUser(bookingId: string, authUser: AuthUser) {
+    if (!bookingId) {
+      throw new ApiError(400, "Booking ID is required");
+    }
+
+    const isAdmin =
+      authUser.role === "ADMIN" || authUser.role === "SUPER_ADMIN";
+
+    return await prisma.booking.findFirst({
+      where: {
+        id: bookingId,
+        ...(isAdmin ? {} : { userId: authUser.userId }),
+      },
+      include: {
+        seats: {
+          include: {
+            seat: true,
+          },
+        },
+        showtime: {
+          include: {
+            movie: true,
+            screen: {
+              include: {
+                theater: true,
+              },
+            },
+            seatPricings: true,
+          },
+        },
+        payment: true,
+      },
+    });
+  }
+
+  /**
+   * Internal-only booking retrieval (e.g., system tasks / webhook processing)
+   */
   static async getBookingById(id: string) {
     return await prisma.booking.findUnique({
       where: {

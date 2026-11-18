@@ -1,13 +1,10 @@
 import { NextFunction, Request, Response } from "express";
-import jwt, { JwtPayload } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import { ENV } from "../config/env";
-
-interface AuthRequest extends Request {
-  user?: string | JwtPayload;
-}
+import { AuthUser } from "../types/express";
 
 export const authMiddleware = (
-  req: AuthRequest,
+  req: Request,
   res: Response,
   next: NextFunction,
 ) => {
@@ -16,13 +13,21 @@ export const authMiddleware = (
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res
         .status(401)
-        .json({ message: "Unauthorized:No token provided" });
+        .json({ message: "Unauthorized: No token provided" });
     }
     const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, ENV.JWT_ACCESS_TOKEN_SECRET as string);
+    const decoded = jwt.verify(
+      token,
+      ENV.JWT_ACCESS_TOKEN_SECRET as string,
+    ) as AuthUser;
+
+    if (!decoded || !decoded.userId) {
+      return res.status(401).json({ message: "Unauthorized: Invalid token payload" });
+    }
+
     req.user = decoded;
     next();
   } catch (error) {
-    return res.status(401).json({ message: "Unauthorized:Invalid token" });
+    return res.status(401).json({ message: "Unauthorized: Invalid token" });
   }
 };

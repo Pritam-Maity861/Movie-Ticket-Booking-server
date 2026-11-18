@@ -24,7 +24,7 @@ export const handleRazorpayWebhook = async (req: Request, res: Response) => {
     }
 
     const rawBody =
-      (req as any).rawBody || Buffer.from(JSON.stringify(req.body));
+      req.rawBody || Buffer.from(JSON.stringify(req.body));
 
     const expectedSignature = crypto
       .createHmac("sha256", webhookSecret)

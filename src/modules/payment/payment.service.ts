@@ -6,6 +6,7 @@ import { ApiError } from "../../utils/api-error";
 import crypto from "crypto";
 import { redisServiceses } from "../../services/seatLock.service";
 import { PaymentRepository } from "./payment.repository";
+import { AuthUser } from "../../types/express";
 
 /**
  * Timing-safe string comparison to prevent timing attacks
@@ -377,6 +378,50 @@ export class PaymentService {
     }
     return paymentsData;
   }
+  /**
+   * Authorized payment retrieval enforcing user ownership at the database level.
+   * - Normal USER: queries by { id: paymentId, userId: authUser.userId }
+   * - ADMIN / SUPER_ADMIN: queries across all users by { id: paymentId }
+   * Returns null if non-existent or unauthorized.
+   */
+  static async getPaymentByIdForUser(paymentId: string, authUser: AuthUser) {
+    if (!paymentId) {
+      throw new ApiError(400, "Payment ID is required");
+    }
+
+    const isAdmin =
+      authUser.role === "ADMIN" || authUser.role === "SUPER_ADMIN";
+
+    const payment = await prisma.payment.findFirst({
+      where: {
+        id: paymentId,
+        ...(isAdmin ? {} : { userId: authUser.userId }),
+      },
+      include: {
+        booking: {
+          include: {
+            user: true,
+            showtime: {
+              include: {
+                movie: true,
+                screen: {
+                  include: {
+                    theater: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!payment) {
+      throw new ApiError(404, "Payment not found");
+    }
+    return payment;
+  }
+
   static async getPaymentByID(paymentId: string) {
     if (!paymentId) {
       throw new ApiError(400, "Payment ID is required");
