@@ -17,6 +17,7 @@ export class AuthService {
       regUser.email,
       hashedPassword,
       regUser.name,
+      regUser.role || "USER",
     );
 
     const accessToken = generateAccessToken(user.id, user.role, user.email);

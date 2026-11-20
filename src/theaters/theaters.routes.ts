@@ -11,14 +11,17 @@ import { requireRoles } from "../middleware/role.middleware";
 
 const theaterRouter = Router();
 
+// Public discovery endpoints
+theaterRouter.get("/", getTheaters);
+theaterRouter.get("/:id", getTheaterById);
+
+// Protected mutation endpoints (Admin / Super Admin only)
 theaterRouter.post(
   "/add-theater",
   authMiddleware,
   requireRoles(["ADMIN", "SUPER_ADMIN"]),
   addTheatr,
 );
-theaterRouter.get("/", authMiddleware, getTheaters);
-theaterRouter.get("/:id", authMiddleware, getTheaterById);
 theaterRouter.patch(
   "/:id",
   authMiddleware,

@@ -11,12 +11,18 @@ export class AuthRepository {
     });
   }
 
-  static createUser(email: string, password: string, name: string) {
+  static createUser(
+    email: string,
+    password: string,
+    name: string,
+    role: "USER" | "THEATER_OWNER" = "USER",
+  ) {
     return prisma.user.create({
       data: {
         email,
         password,
         name,
+        role,
       },
     });
   }

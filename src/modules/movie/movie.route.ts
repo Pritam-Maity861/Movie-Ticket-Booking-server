@@ -21,14 +21,24 @@ import upload from "../../middleware/multer.middleware";
 
 const movieRouter = Router();
 
-// Genre routes
+// Public discovery endpoints for movies, genres, and languages
+movieRouter.get("/", getAllmovies);
+movieRouter.get("/get-all-movie", getAllmovies); // with pagination
+movieRouter.get("/get-all", getAllmoviesWithoutPagination); // without pagination
+movieRouter.get("/genres", getGenre);
+movieRouter.get("/get-genre", getGenre);
+movieRouter.get("/languages", getLanguage);
+movieRouter.get("/get-language", getLanguage);
+movieRouter.get("/get-movie/:id", getMovieById);
+movieRouter.get("/:id", getMovieById);
+
+// Protected Genre mutation routes
 movieRouter.post(
   "/add-genre",
   authMiddleware,
   requireRoles(["ADMIN", "SUPER_ADMIN"]),
   createGenre,
 );
-movieRouter.get("/get-genre", authMiddleware, getGenre);
 movieRouter.patch(
   "/update-genre/:id",
   authMiddleware,
@@ -42,14 +52,13 @@ movieRouter.delete(
   DeleteGnere,
 );
 
-// Language routes
+// Protected Language mutation routes
 movieRouter.post(
   "/add-language",
   authMiddleware,
   requireRoles(["ADMIN", "SUPER_ADMIN"]),
   createLanguage,
 );
-movieRouter.get("/get-language", authMiddleware, getLanguage);
 movieRouter.patch(
   "/update-language/:id",
   authMiddleware,
@@ -63,7 +72,7 @@ movieRouter.delete(
   DeleteLanguage,
 );
 
-// Movie routes
+// Protected Movie mutation routes
 movieRouter.post(
   "/add-movie",
   authMiddleware,
@@ -71,8 +80,6 @@ movieRouter.post(
   upload.single("posterUrl"),
   createMovie,
 );
-movieRouter.get("/get-all-movie", getAllmovies); // with pagination
-movieRouter.get("/get-all", getAllmoviesWithoutPagination); // without pagination
 movieRouter.patch(
   "/update-movie/:id",
   authMiddleware,
@@ -86,6 +93,5 @@ movieRouter.delete(
   requireRoles(["ADMIN", "SUPER_ADMIN"]),
   deleteMovie,
 );
-movieRouter.get("/get-movie/:id", getMovieById);
 
 export default movieRouter;

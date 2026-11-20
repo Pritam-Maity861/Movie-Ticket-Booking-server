@@ -4,17 +4,41 @@ import { ApiError } from "../../utils/api-error";
 import { bookingPayloadSchema } from "./booking.validation";
 import { BookingService } from "./booking.service";
 import { ApiResponse } from "../../utils/api-response";
+import { redis } from "../../config/redis";
 
 // create pending booking (before payment confirmation)
 export const pendingBooking = asyncHandler(
   async (req: Request, res: Response) => {
     const authUser = req.user;
     if (!authUser?.userId) {
-      throw new ApiError(401, "User not authenticated");
+      throw new ApiError(401, "User not authenticated", [], "UNAUTHORIZED");
     }
+
+    const idempotencyKey = (req.headers["idempotency-key"] ||
+      req.headers["x-idempotency-key"]) as string | undefined;
+
+    if (idempotencyKey) {
+      try {
+        const cachedResponse = await redis.get(
+          `idempotency:booking:${idempotencyKey}`,
+        );
+        if (cachedResponse) {
+          const parsed = JSON.parse(cachedResponse);
+          return res.status(parsed.statusCode || 200).json(parsed);
+        }
+      } catch (err) {
+        console.warn("[Booking] Redis idempotency lookup error:", err);
+      }
+    }
+
     const parsedData = bookingPayloadSchema.safeParse(req.body);
     if (!parsedData.success) {
-      throw new ApiError(400, parsedData.error.message);
+      throw new ApiError(
+        400,
+        parsedData.error.message,
+        parsedData.error.issues,
+        "VALIDATION_FAILED",
+      );
     }
     const { showtimeId, seatIds } = parsedData.data;
 
@@ -23,15 +47,27 @@ export const pendingBooking = asyncHandler(
       showtimeId,
       seatIds,
     );
-    res
-      .status(200)
-      .json(
-        new ApiResponse(
-          200,
-          result,
-          "Booking done! waiting for payment confirmation",
-        ),
-      );
+
+    const responsePayload = new ApiResponse(
+      200,
+      result,
+      "Booking done! waiting for payment confirmation",
+    );
+
+    if (idempotencyKey) {
+      try {
+        await redis.set(
+          `idempotency:booking:${idempotencyKey}`,
+          JSON.stringify(responsePayload),
+          "EX",
+          600,
+        );
+      } catch (err) {
+        console.warn("[Booking] Redis idempotency save error:", err);
+      }
+    }
+
+    res.status(200).json(responsePayload);
   },
 );
 

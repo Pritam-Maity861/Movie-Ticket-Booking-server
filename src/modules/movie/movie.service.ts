@@ -188,15 +188,44 @@ export class MovieService {
     );
   }
 
-  static async getAllMovies({ page, limit }: { page: number; limit: number }) {
-    const cacheKey = `movies:page:${page}:limit:${limit}`;
-     const cachedData = await redis.get(cacheKey);
-    if (cachedData) return JSON.parse(cachedData);
-    const movies = await MovieRepository.getAllMovies({ page, limit });
+  static async getAllMovies({
+    page,
+    limit,
+    search,
+    genreId,
+    languageId,
+  }: {
+    page: number;
+    limit: number;
+    search?: string;
+    genreId?: string;
+    languageId?: string;
+  }) {
+    const s = search ? search.trim().toLowerCase() : "";
+    const g = genreId || "";
+    const l = languageId || "";
+    const cacheKey = `movies:p:${page}:l:${limit}:s:${s}:g:${g}:lang:${l}`;
+
+    try {
+      const cachedData = await redis.get(cacheKey);
+      if (cachedData) return JSON.parse(cachedData);
+    } catch {}
+
+    const movies = await MovieRepository.getAllMovies({
+      page,
+      limit,
+      search,
+      genreId,
+      languageId,
+    });
     if (!movies) {
       throw new Error("Failed to get movies");
     }
-    await redis.setex(cacheKey, 3600, JSON.stringify(movies));
+
+    try {
+      await redis.setex(cacheKey, 3600, JSON.stringify(movies));
+    } catch {}
+
     return movies;
   }
 

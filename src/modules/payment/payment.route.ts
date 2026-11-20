@@ -8,6 +8,7 @@ import {
   PaymentVerifyController,
 } from "./payment.controller";
 import { handleRazorpayWebhook } from "./payment.webhook";
+import { bookingRateLimiter } from "../../middleware/rate-limit.middleware";
 
 const paymentRouter = Router();
 
@@ -15,7 +16,12 @@ const paymentRouter = Router();
 paymentRouter.post("/webhook", handleRazorpayWebhook);
 
 // Create order for existing booking
-paymentRouter.post("/create-order", authMiddleware, PaymentController);
+paymentRouter.post(
+  "/create-order",
+  authMiddleware,
+  bookingRateLimiter,
+  PaymentController,
+);
 
 // Payment verify
 paymentRouter.post("/verify", PaymentVerifyController);

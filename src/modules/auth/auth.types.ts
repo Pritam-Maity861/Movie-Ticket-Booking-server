@@ -4,6 +4,7 @@ export interface registerUser {
   email: string;
   password: string;
   name: string;
+  role?: "USER" | "THEATER_OWNER";
   ipaddress?: string;
   device?: string;
   userAgent?: string;

@@ -179,7 +179,17 @@ export const createMovie = asyncHandler(async (req, res) => {
 export const getAllmovies = asyncHandler(async (req, res) => {
   let page = parseInt(req.query.page as string) || 1;
   let limit = parseInt(req.query.limit as string) || 10;
-  const result = await MovieService.getAllMovies({ page, limit });
+  const search = req.query.search as string | undefined;
+  const genreId = req.query.genreId as string | undefined;
+  const languageId = req.query.languageId as string | undefined;
+
+  const result = await MovieService.getAllMovies({
+    page,
+    limit,
+    search,
+    genreId,
+    languageId,
+  });
   res
     .status(200)
     .json(new ApiResponse(200, result, "Movies fetched successfully"));

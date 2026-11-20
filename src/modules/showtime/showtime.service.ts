@@ -5,6 +5,7 @@ import { MovieRepository } from "../movie/movie.repository";
 import { ScreenRepository } from "../screen/screen.repository";
 import { ShowtimeRepository } from "./showtime.repository";
 import { CreateShowtimeInput } from "./showtime.validation";
+import { generateSeatGrid } from "../screen/screen.utils";
 
 export class ShowtimeService {
   static async createShowtime(data: CreateShowtimeInput) {
@@ -85,8 +86,12 @@ export class ShowtimeService {
     return showtime;
   }
 
-  static async getShowtimes(movieId: string, date: Date) {
-    const showtimes = await ShowtimeRepository.getShowtimes(movieId, date);
+  static async getShowtimes(movieId: string, date: Date, theaterId?: string) {
+    const showtimes = await ShowtimeRepository.getShowtimes(
+      movieId,
+      date,
+      theaterId,
+    );
     const theaterMap = new Map();
 
     for (const show of showtimes) {
@@ -136,6 +141,24 @@ export class ShowtimeService {
       throw new ApiError(404, "Showtime not found");
     }
 
+    // Auto-generate default seats if screen currently has 0 seats
+    if (showtime.screen && (!showtime.screen.seats || showtime.screen.seats.length === 0)) {
+      const generated = generateSeatGrid(
+        showtime.screen.id,
+        showtime.screen.totalSeats || 100,
+      );
+      if (generated.length > 0) {
+        await prisma.seat.createMany({
+          data: generated,
+          skipDuplicates: true,
+        });
+        showtime.screen.seats = await prisma.seat.findMany({
+          where: { screenId: showtime.screen.id },
+          orderBy: [{ row: "asc" }, { number: "asc" }],
+        });
+      }
+    }
+
     const bookedSeatIds = new Set<string>();
     const lockedSeatIds = new Set<string>();
 
@@ -178,6 +201,134 @@ export class ShowtimeService {
       ...showtime,
       bookedSeatIds: Array.from(bookedSeatIds),
       lockedSeatIds: Array.from(lockedSeatIds),
+    };
+  }
+
+  /**
+   * Unified real-time seat availability map combining DB status + Redis locks.
+   * Returns standardized { seatId, row, number, type, price, status: 'AVAILABLE' | 'HELD' | 'BOOKED' }
+   */
+  static async getShowtimeSeatAvailability(showtimeId: string) {
+    if (!showtimeId) {
+      throw new ApiError(400, "Showtime ID is required");
+    }
+
+    const showtime = await prisma.showtime.findUnique({
+      where: { id: showtimeId },
+      include: {
+        screen: {
+          include: {
+            theater: true,
+            seats: { orderBy: [{ row: "asc" }, { number: "asc" }] },
+          },
+        },
+        seatPricings: true,
+        bookingSeats: {
+          where: {
+            booking: {
+              OR: [
+                { status: "CONFIRMED" },
+                { status: "PENDING", expiresAt: { gt: new Date() } },
+              ],
+            },
+          },
+          include: { booking: true },
+        },
+      },
+    });
+
+    if (!showtime) {
+      throw new ApiError(404, "Showtime not found");
+    }
+
+    // Auto-generate default seats if screen currently has 0 seats
+    let screenSeats = showtime.screen?.seats || [];
+    if (showtime.screen && screenSeats.length === 0) {
+      const generated = generateSeatGrid(
+        showtime.screen.id,
+        showtime.screen.totalSeats || 100,
+      );
+      if (generated.length > 0) {
+        await prisma.seat.createMany({
+          data: generated,
+          skipDuplicates: true,
+        });
+        screenSeats = await prisma.seat.findMany({
+          where: { screenId: showtime.screen.id },
+          orderBy: [{ row: "asc" }, { number: "asc" }],
+        });
+      }
+    }
+
+    // Build pricing map
+    const pricingMap = new Map(
+      showtime.seatPricings.map((p) => [p.seatType, p.price]),
+    );
+
+    // Build DB booked/held maps
+    const bookedSeatIds = new Set<string>();
+    const dbHeldSeatIds = new Set<string>();
+
+    for (const bs of showtime.bookingSeats) {
+      if (bs.booking.status === "CONFIRMED") {
+        bookedSeatIds.add(bs.seatId);
+      } else if (bs.booking.status === "PENDING") {
+        dbHeldSeatIds.add(bs.seatId);
+      }
+    }
+
+    // Check Redis locks (non-fatal if Redis connection is unavailable)
+    const redisHeldSeatIds = new Set<string>();
+    try {
+      const seatKeys = screenSeats.map(
+        (s) => `lock:showtime:${showtimeId}:seat:${s.id}`,
+      );
+      if (seatKeys.length > 0) {
+        const redisLockValues = await redis.mget(...seatKeys);
+        screenSeats.forEach((seat, idx) => {
+          if (redisLockValues && redisLockValues[idx] !== null) {
+            redisHeldSeatIds.add(seat.id);
+          }
+        });
+      }
+    } catch (redisErr) {
+      console.warn(
+        `[ShowtimeService] Warning: Could not read Redis locks for showtime ${showtimeId} (falling back to DB state):`,
+        redisErr,
+      );
+    }
+
+    // Assemble unified layout
+    const seatLayout = screenSeats.map((seat) => {
+      let status: "AVAILABLE" | "HELD" | "BOOKED" = "AVAILABLE";
+
+      if (bookedSeatIds.has(seat.id)) {
+        status = "BOOKED";
+      } else if (dbHeldSeatIds.has(seat.id) || redisHeldSeatIds.has(seat.id)) {
+        status = "HELD";
+      }
+
+      return {
+        seatId: seat.id,
+        row: seat.row,
+        number: seat.number,
+        type: seat.type,
+        price: pricingMap.get(seat.type) || 0,
+        status,
+      };
+    });
+
+    return {
+      showtimeId: showtime.id,
+      movieId: showtime.movieId,
+      theaterName: showtime.screen.theater.name,
+      screenName: showtime.screen.name,
+      startTime: showtime.startTime,
+      endTime: showtime.endTime,
+      totalSeats: showtime.screen.totalSeats,
+      availableSeatsCount: seatLayout.filter((s) => s.status === "AVAILABLE")
+        .length,
+      seats: seatLayout,
     };
   }
 

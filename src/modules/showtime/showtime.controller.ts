@@ -31,11 +31,24 @@ export const createShowtime = asyncHandler(
  */
 export const getShowtimes = asyncHandler(
   async (req: Request, res: Response) => {
-    const { movieId, date } = req.body;
-    if (!movieId || !date) {
-      throw new ApiError(400, "movie id and date are required");
+    const movieId = (req.query.movieId as string) || req.body?.movieId;
+    const dateStr = (req.query.date as string) || req.body?.date;
+    const theaterId = (req.query.theaterId as string) || req.body?.theaterId;
+
+    if (!movieId || !dateStr) {
+      throw new ApiError(400, "movieId and date are required query parameters");
     }
-    const result = await ShowtimeService.getShowtimes(movieId, date);
+
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) {
+      throw new ApiError(400, "Invalid date format. Expected YYYY-MM-DD");
+    }
+
+    const result = await ShowtimeService.getShowtimes(
+      movieId,
+      date,
+      theaterId,
+    );
     res
       .status(200)
       .json(new ApiResponse(200, result, "showtimes fetched successfully"));
@@ -52,6 +65,22 @@ export const getShowtimeById = asyncHandler(
     res
       .status(200)
       .json(new ApiResponse(200, result, "showtime fetched successfully"));
+  },
+);
+
+/**
+ * @description  get showtime seat availability map
+ */
+export const getShowtimeSeats = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+    if (!id) {
+      throw new ApiError(400, "Showtime ID is required");
+    }
+    const result = await ShowtimeService.getShowtimeSeatAvailability(id as string);
+    res
+      .status(200)
+      .json(new ApiResponse(200, result, "Showtime seats fetched successfully"));
   },
 );
 

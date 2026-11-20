@@ -19,8 +19,25 @@ datasource db {
 
 enum UserRole {
   USER
+  THEATER_OWNER
   ADMIN
   SUPER_ADMIN
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ApprovalTargetType {
+  REGISTER_THEATER
+  UPDATE_THEATER
+  CREATE_SCREEN
+  UPDATE_SCREEN
+  DELETE_SCREEN
+  CREATE_SHOWTIME
+  DELETE_SHOWTIME
 }
 
 enum CreditRole {
@@ -76,7 +93,13 @@ model User {
 
   refreshTokens RefreshToken[]
 
+  // Relations for Theater Owner & Admin Approvals
+  ownedTheaters     Theater[]         @relation("TheaterOwner")
+  submittedRequests ApprovalRequest[] @relation("OwnerRequests")
+  reviewedRequests  ApprovalRequest[] @relation("AdminReviews")
+
   @@index([email])
+  @@index([role])
 }
 
 model RefreshToken {
@@ -179,16 +202,25 @@ model MovieCredit {
 //////////////////////////////////////////////////
 
 model Theater {
-  id      String @id @default(uuid())
-  name    String
-  city    String
-  address String
-  ratting Float?
+  id        String          @id @default(uuid())
+  name      String
+  city      String
+  address   String
+  ratting   Float?
+  rating    Float?
+  amenities String[]        @default([])
+  status    ApprovalStatus  @default(PENDING) // Must be APPROVED to show in public/AI
+  ownerId   String?                          // The Theater Owner user ID
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  screens Screen[]
+  owner            User?             @relation("TheaterOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  screens          Screen[]
+  approvalRequests ApprovalRequest[]
+
+  @@index([ownerId])
+  @@index([status])
 }
 
 //////////////////////////////////////////////////
@@ -344,4 +376,33 @@ model Payment {
   user    User    @relation(fields: [userId], references: [id])
 
   @@index([userId])
+}
+
+//////////////////////////////////////////////////
+// APPROVAL REQUEST (AUDIT & MAKER-CHECKER ENGINE)
+//////////////////////////////////////////////////
+
+model ApprovalRequest {
+  id            String             @id @default(uuid())
+  ownerId       String             // Submitting Theater Owner
+  theaterId     String?            // Target Theater (if exists or once registered)
+  targetType    ApprovalTargetType
+  targetId      String?            // ID of target entity being modified/deleted (if applicable)
+  payload       Json               // Complete proposed changes or creation payload
+  status        ApprovalStatus     @default(PENDING)
+  adminFeedback String?            // Feedback explaining rejection or approval notes
+  reviewedById  String?            // Admin user who reviewed
+  reviewedAt    DateTime?
+
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  owner       User     @relation("OwnerRequests", fields: [ownerId], references: [id], onDelete: Cascade)
+  reviewedBy  User?    @relation("AdminReviews", fields: [reviewedById], references: [id], onDelete: SetNull)
+  theater     Theater? @relation(fields: [theaterId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+  @@index([status])
+  @@index([theaterId])
+  @@index([targetType])
 }

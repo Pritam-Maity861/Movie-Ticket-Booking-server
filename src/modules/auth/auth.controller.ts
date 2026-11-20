@@ -23,6 +23,7 @@ export const signUp = asyncHandler(async (req: Request, res: Response) => {
     email: parsedData.data.email,
     password: parsedData.data.password,
     name: parsedData.data.name,
+    role: parsedData.data.role,
     device,
     ipaddress: req.ip,
     userAgent: device,

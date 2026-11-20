@@ -45,7 +45,7 @@ export class ShowtimeRepository {
     });
   }
 
-  static async getShowtimes(movieId: string, date: Date) {
+  static async getShowtimes(movieId: string, date: Date, theaterId?: string) {
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(date);
@@ -56,6 +56,10 @@ export class ShowtimeRepository {
         startTime: {
           gte: startOfDay,
           lt: endOfDay,
+        },
+        screen: {
+          theater: { status: "APPROVED" },
+          ...(theaterId ? { theaterId } : {}),
         },
       },
       include: {

@@ -5,12 +5,15 @@ import { requireRoles } from "../../middleware/role.middleware";
 
 const screenRouter = Router();
 
+// Public discovery endpoint
+screenRouter.get("/screens", getScreenByTheater);
+
+// Protected mutation endpoint (Admin / Super Admin only)
 screenRouter.post(
   "/create-screen",
   authMiddleware,
   requireRoles(["ADMIN", "SUPER_ADMIN"]),
   addScreen,
 );
-screenRouter.get("/screens", authMiddleware, getScreenByTheater);
 
 export default screenRouter;

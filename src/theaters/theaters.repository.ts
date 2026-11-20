@@ -5,12 +5,17 @@ import { CreateTheaterPayload, UpdateTheaterPayload } from "./theaters.validatio
 export class TheaterRepository{
     static async createTheater(data:CreateTheaterPayload){
         return await prisma.theater.create({
-            data
+            data: {
+                ...data,
+                status: "APPROVED",
+            }
         })
     }
 
-    static async getTheaters(){
-        return prisma.theater.findMany();
+    static async getTheaters(includePending = false){
+        return prisma.theater.findMany({
+            where: includePending ? {} : { status: "APPROVED" }
+        });
     }
 
     static async getTheaterById(id:string){

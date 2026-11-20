@@ -90,32 +90,70 @@ export class MovieRepository{
     //     });
     //   }
 
-      static async getAllMovies({page,limit}: {page: number, limit: number}){
-        const skip=(page-1)*limit; //calculate the number of records to skip
-        const movies=await prisma.movie.findMany({
-            skip,
-            take:limit,
-            orderBy:{
-                createdAt:'desc'
-            },
-            include:{
-                languages:true,
-                genres:true,
-                credits:{
-                    include:{
-                        person:true
-                    }
-                }
-            }
-        });
-        //total count
-        const total=await prisma.movie.count();
-        return {
-            movies,
-            currentPage:page,
-            totalPages:Math.ceil(total/limit),
-            hasMore:skip+movies.length<total,
+      static async getAllMovies({
+        page,
+        limit,
+        search,
+        genreId,
+        languageId,
+      }: {
+        page: number;
+        limit: number;
+        search?: string;
+        genreId?: string;
+        languageId?: string;
+      }) {
+        const skip = (page - 1) * limit; // calculate the number of records to skip
+
+        const whereClause: any = {};
+
+        if (search && search.trim() !== "") {
+          whereClause.title = {
+            contains: search.trim(),
+            mode: "insensitive",
+          };
         }
+
+        if (genreId) {
+          whereClause.genres = {
+            some: { id: genreId },
+          };
+        }
+
+        if (languageId) {
+          whereClause.languages = {
+            some: { id: languageId },
+          };
+        }
+
+        const [movies, total] = await Promise.all([
+          prisma.movie.findMany({
+            where: whereClause,
+            skip,
+            take: limit,
+            orderBy: {
+              createdAt: "desc",
+            },
+            include: {
+              languages: true,
+              genres: true,
+              credits: {
+                include: {
+                  person: true,
+                },
+              },
+            },
+          }),
+          prisma.movie.count({ where: whereClause }),
+        ]);
+
+        return {
+          movies,
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalCount: total,
+          hasMore: skip + movies.length < total,
+        };
       }
 
       static getAllMoviesWithoutPagination(){
